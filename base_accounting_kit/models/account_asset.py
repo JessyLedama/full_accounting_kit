@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -37,27 +37,42 @@ class AccountAssetCategory(models.Model):
 
     active = fields.Boolean(default=True)
     name = fields.Char(required=True, index=True, string="Asset Type")
+    company_id = fields.Many2one('res.company', string='Company',
+                                 required=True, default=lambda self: self.env.company)
     account_analytic_id = fields.Many2one('account.analytic.account',
-                                          string='Analytic Account')
+                                          string='Analytic Account',domain="[('company_id', '=', company_id)]")
     account_asset_id = fields.Many2one('account.account',
                                        string='Asset Account', required=True,
-                                       domain=[('internal_type', '=', 'other'),
+                                       domain=[('account_type', '!=', 'asset_receivable'),
+                                               ('account_type', '!=', 'liability_payable'),
+                                               ('account_type', '!=', 'asset_cash'),
+                                               ('account_type', '!=', 'liability_credit_card'),
                                                ('deprecated', '=', False)],
                                        help="Account used to record the purchase of the asset at its original price.")
     account_depreciation_id = fields.Many2one('account.account',
                                               string='Depreciation Entries: Asset Account',
-                                              required=True, domain=[
-            ('internal_type', '=', 'other'), ('deprecated', '=', False)],
-                                              help="Account used in the depreciation entries, to decrease the asset value.")
+                                              required=True, domain=[('account_type', '!=', 'asset_receivable'),
+                                                                     ('account_type', '!=', 'liability_payable'),
+                                                                     ('account_type', '!=', 'asset_cash'),
+                                                                     ('account_type', '!=', 'liability_credit_card'),
+                                                                     ('deprecated', '=', False), ('company_id', '=', company_id)],
+                                              help="Account used in the depreciation entries, to decrease the asset "
+                                                   "value.")
     account_depreciation_expense_id = fields.Many2one('account.account',
                                                       string='Depreciation Entries: Expense Account',
-                                                      required=True, domain=[
-            ('internal_type', '=', 'other'), ('deprecated', '=', False)],
-                                                      help="Account used in the periodical entries, to record a part of the asset as expense.")
+                                                      required=True, domain=[('account_type', '!=', 'asset_receivable'),
+                                                                             (
+                                                                                 'account_type', '!=',
+                                                                                 'liability_payable'),
+                                                                             ('account_type', '!=', 'asset_cash'),
+                                                                             ('account_type', '!=',
+                                                                              'liability_credit_card'),
+                                                                             ('deprecated', '=', False), ('company_id', '=', company_id)],
+                                                      help="Account used in the periodical entries, to record a part "
+                                                           "of the asset as expense.")
     journal_id = fields.Many2one('account.journal', string='Journal',
                                  required=True)
-    company_id = fields.Many2one('res.company', string='Company',
-                                 required=True, default=lambda self: self.env.company)
+
     method = fields.Selection(
         [('linear', 'Linear'), ('degressive', 'Degressive')],
         string='Computation Method', required=True, default='linear',
@@ -222,9 +237,9 @@ class AccountAssetAsset(models.Model):
         result = dict(self.env.cr.fetchall())
         return result
 
-    @api.model
-    def _cron_generate_entries(self):
-        self.compute_generated_entries(datetime.today())
+    # @api.model
+    # def _cron_generate_entries(self):
+    #     self.compute_generated_entries(datetime.today())
 
     @api.model
     def compute_generated_entries(self, date, asset_type=None):
@@ -614,9 +629,9 @@ class AccountAssetDepreciationLine(models.Model):
                                required=True, ondelete='cascade')
     parent_state = fields.Selection(related='asset_id.state',
                                     string='State of Asset')
-    amount = fields.Float(string='Current Depreciation', digits=0,
+    amount = fields.Float(string='Current Depreciation',
                           required=True)
-    remaining_value = fields.Float(string='Next Period Depreciation', digits=0,
+    remaining_value = fields.Float(string='Next Period Depreciation',
                                    required=True)
     depreciated_value = fields.Float(string='Cumulative Depreciation',
                                      required=True)
@@ -664,8 +679,8 @@ class AccountAssetDepreciationLine(models.Model):
                                                   precision_digits=prec) > 0 else 0.0,
                 'journal_id': category_id.journal_id.id,
                 'partner_id': partner.id,
-                'analytic_account_id': category_id.account_analytic_id.id if category_id.type == 'sale' else False,
-                'currency_id': company_currency != current_currency and current_currency.id or False,
+                # 'analytic_account_id': category_id.account_analytic_id.id if category_id.type == 'sale' else False,
+                'currency_id': company_currency != current_currency and current_currency.id or company_currency.id,
                 'amount_currency': company_currency != current_currency and - 1.0 * line.amount or 0.0,
             }
             move_line_2 = {
@@ -677,8 +692,8 @@ class AccountAssetDepreciationLine(models.Model):
                                                  precision_digits=prec) > 0 else 0.0,
                 'journal_id': category_id.journal_id.id,
                 'partner_id': partner.id,
-                'analytic_account_id': category_id.account_analytic_id.id if category_id.type == 'purchase' else False,
-                'currency_id': company_currency != current_currency and current_currency.id or False,
+                # 'analytic_account_id': category_id.account_analytic_id.id if category_id.type == 'purchase' else False,
+                'currency_id': company_currency != current_currency and current_currency.id or company_currency.id,
                 'amount_currency': company_currency != current_currency and line.amount or 0.0,
             }
             move_vals = {
@@ -688,6 +703,14 @@ class AccountAssetDepreciationLine(models.Model):
                 'line_ids': [(0, 0, move_line_1), (0, 0, move_line_2)],
             }
             move = self.env['account.move'].create(move_vals)
+            for move_line in move.line_ids:
+                if move_line.account_id.id == move_line_1['account_id']:
+                    move_line.debit = move_line_1['debit']
+                    move_line.credit = move_line_1['credit']
+                elif move_line.account_id.id == move_line_2['account_id']:
+                    move_line.write({'debit': move_line_2['debit'], 'credit': move_line_2['credit']})
+            if move.line_ids.filtered(lambda x:x.name == 'Automatic Balancing Line'):
+                move.line_ids.filtered(lambda x:x.name == 'Automatic Balancing Line').unlink()
             line.write({'move_id': move.id, 'move_check': True})
             created_moves |= move
 

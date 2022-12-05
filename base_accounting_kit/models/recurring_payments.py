@@ -146,12 +146,12 @@ class RecurringPayments(models.Model):
                 'account_id': tmpl_id.credit_account.id,
                 'partner_id': tmpl_id.partner_id.id,
                 'credit': line.amount,
-                'analytic_account_id': tmpl_id.analytic_account_id.id,
+                # 'analytic_account_id': tmpl_id.analytic_account_id.id,
             }), (0, 0, {
                 'account_id': tmpl_id.debit_account.id,
                 'partner_id': tmpl_id.partner_id.id,
                 'debit': line.amount,
-                'analytic_account_id': tmpl_id.analytic_account_id.id,
+                # 'analytic_account_id': tmpl_id.analytic_account_id.id,
             })]
             vals = {
                 'date': line.date,
@@ -167,13 +167,13 @@ class RecurringPayments(models.Model):
                 move_id.post()
 
 
-    class GetAllRecurringEntries(models.TransientModel):
-        _name = 'account.recurring.entries.line'
-        _description = 'Account Recurring Entries Line'
+class GetAllRecurringEntries(models.TransientModel):
+    _name = 'account.recurring.entries.line'
+    _description = 'Account Recurring Entries Line'
 
-        date = fields.Date('Date')
-        template_name = fields.Char('Name')
-        amount = fields.Float('Amount')
-        tmpl_id = fields.Many2one('account.recurring.payments', string='id')
+    date = fields.Date('Date')
+    template_name = fields.Char('Name')
+    amount = fields.Float('Amount')
+    tmpl_id = fields.Many2one('account.recurring.payments', string='id')
 
 

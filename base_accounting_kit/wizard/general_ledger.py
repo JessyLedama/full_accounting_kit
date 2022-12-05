@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -29,6 +29,7 @@ class AccountReportGeneralLedger(models.TransientModel):
     _name = "account.report.general.ledger"
     _description = "General Ledger Report"
 
+    name = fields.Char(string="General Ledger", default="General Ledger", required=True, translate=True)
     initial_balance = fields.Boolean(string='Include Initial Balances',
                                      help='If you selected date, this field '
                                           'allow you to add a row to display '

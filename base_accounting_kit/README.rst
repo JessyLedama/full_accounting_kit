@@ -1,6 +1,6 @@
-Accounting Kit
-==============
-* Full accounting kit for Odoo 15 community editions
+Accounting Kit V16
+==================
+* Full accounting kit for Odoo 16 community editions
 
 Installation
 ============
@@ -25,6 +25,7 @@ Credits
 (v13) Varsha Vivek @ Cybrosys
 (v14) Risha @ Cybrosys
 (V15) Mehjabin @ Cybrosys
+(V16) Aiswarya JP, Noorjahan NA, Neethu UM
 
 Contacts
 --------

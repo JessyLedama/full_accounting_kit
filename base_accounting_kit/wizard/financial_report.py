@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -26,14 +26,32 @@ from odoo import api, models, fields
 
 class FinancialReport(models.TransientModel):
     _name = "financial.report"
-    _inherit = "account.common.report"
+    _inherit = "account.report"
     _description = "Financial Reports"
+
+    name = fields.Char(string="Financial Report", default="Financial Report", required=True, translate=True)
+
+    target_move = fields.Selection([('posted', 'All Posted Entries'),
+                                    ('all', 'All Entries'),
+                                    ], string='Target Moves', required=True, default='posted')
 
     view_format = fields.Selection([
         ('vertical', 'Vertical'),
         ('horizontal', 'Horizontal')],
         default='vertical',
         string="Format")
+
+
+    def _build_contexts(self, data):
+        result = {}
+        result['journal_ids'] = 'journal_ids' in data['form'] and data['form'][
+            'journal_ids'] or False
+        result['state'] = 'target_move' in data['form'] and data['form'][
+            'target_move'] or ''
+        result['date_from'] = data['form']['date_from'] or False
+        result['date_to'] = data['form']['date_to'] or False
+        result['strict_range'] = True if result['date_from'] else False
+        return result
 
     @api.model
     def _get_account_report(self):
@@ -189,10 +207,24 @@ class FinancialReport(models.TransientModel):
                 # it's the sum the leaf accounts
                 #  with such an account type
                 accounts = self.env['account.account'].search([
-                    ('user_type_id', 'in', report.account_type_ids.ids)
+                    ('account_type', '=', report.account_type_ids)
                 ])
+                if report.name == "Expenses":
+                    accounts = self.env['account.account'].search([
+                        ('account_type', 'in', ["expense","expense_depreciation","expense_direct_cost"])
+                    ])
+                if report.name == "Liability":
+                    accounts = self.env['account.account'].search([
+                        ('account_type', 'in', ["liability_payable","equity","liability_current","liability_non_current"])
+                    ])
+                if report.name == "Assets":
+                    accounts = self.env['account.account'].search([
+                        ('account_type', 'in', ["asset_receivable","asset_cash","asset_current","asset_non_current","asset_prepayments","asset_fixed"])
+                    ])
+
                 res[report.id]['account'] = self._compute_account_balance(
                     accounts)
+
                 for value in res[report.id]['account'].values():
                     for field in fields:
                         res[report.id][field] += value.get(field)
@@ -295,7 +327,7 @@ class FinancialReport(models.TransientModel):
                         'level': (
                                 report.display_detail == 'detail_with_hierarchy' and
                                 4),
-                        'account_type': account.internal_type,
+                        'account_type': account.account_type,
                     }
                     if data['debit_credit']:
                         vals['debit'] = value['debit']

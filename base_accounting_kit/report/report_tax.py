@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -55,15 +55,14 @@ class ReportTax(models.AbstractModel):
         return sql
 
     def _compute_from_amls(self, options, taxes):
-        print("hhhh")
         # compute the tax amount
         sql = self._sql_from_amls_one()
         tables, where_clause, where_params = self.env[
             'account.move.line']._query_get()
+
         query = sql % (tables, where_clause)
         self.env.cr.execute(query, where_params)
         results = self.env.cr.fetchall()
-        print("3333",results)
         for result in results:
             if result[0] in taxes:
                 taxes[result[0]]['tax'] = abs(result[1])

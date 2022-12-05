@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -33,6 +33,8 @@ class AccountAgedTrialBalance(models.TransientModel):
     _inherit = 'account.common.partner.report'
     _description = 'Account Aged Trial balance Report'
 
+    name = fields.Char(string="Account Aged Trial balance Report", default="Account Aged Trial balance Report", required=True, translate=True)
+
     journal_ids = fields.Many2many('account.journal', string='Journals',
                                    required=True)
     period_length = fields.Integer(string='Period Length (days)',
@@ -40,7 +42,6 @@ class AccountAgedTrialBalance(models.TransientModel):
     date_from = fields.Date(default=lambda *a: time.strftime('%Y-%m-%d'))
 
     def _print_report(self, data):
-
         res = {}
         data = self.pre_print_report(data)
         data['form'].update(self.read(['period_length'])[0])

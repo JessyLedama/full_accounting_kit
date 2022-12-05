@@ -3,7 +3,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2019-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2022-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -21,12 +21,28 @@
 #############################################################################
 
 from odoo import api, fields, models
+from odoo.tools.misc import get_lang
 
 
 class AccountingReport(models.TransientModel):
     _name = "cash.flow.report"
-    _inherit = "account.common.report"
+    _inherit = "account.report"
     _description = "Cash Flow Report"
+
+    name = fields.Char(string="Cash Flow Report", default="Cash Flow Report", required=True, translate=True)
+    date_from = fields.Date(string='Start Date')
+    date_to = fields.Date(string='End Date')
+    company_id = fields.Many2one('res.company', string='Company', required=True, readonly=True, default=lambda self: self.env.company)
+    target_move = fields.Selection([('posted', 'All Posted Entries'),
+                                    ('all', 'All Entries'),
+                                    ], string='Target Moves', required=True, default='posted')
+    journal_ids = fields.Many2many(
+        comodel_name='account.journal',
+        string='Journals',
+        required=True,
+        default=lambda self: self.env['account.journal'].search([('company_id', '=', self.company_id.id)]),
+        domain="[('company_id', '=', company_id)]",
+    )
 
     @api.model
     def _get_account_report(self):
@@ -66,6 +82,16 @@ class AccountingReport(models.TransientModel):
             result['strict_range'] = True
         return result
 
+    def _build_contexts(self, data):
+        result = {}
+        result['journal_ids'] = 'journal_ids' in data['form'] and data['form']['journal_ids'] or False
+        result['state'] = 'target_move' in data['form'] and data['form']['target_move'] or ''
+        result['date_from'] = data['form']['date_from'] or False
+        result['date_to'] = data['form']['date_to'] or False
+        result['strict_range'] = True if result['date_from'] else False
+        result['company_id'] = data['form']['company_id'][0] or False
+        return result
+
     # @api.multi
     def check_report(self):
         res = super(AccountingReport, self).check_report()
@@ -79,6 +105,9 @@ class AccountingReport(models.TransientModel):
         comparison_context = self._build_comparison_context(data)
         res['data']['form']['comparison_context'] = comparison_context
         return res
+
+    def _print_report(self, data):
+        raise NotImplementedError()
 
     def _print_report(self, data):
         data['form'].update(self.read(
